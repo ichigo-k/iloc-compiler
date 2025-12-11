@@ -31,20 +31,27 @@ def scan(lines):
                 tokens.append((line_num, 'REGISTER', lexeme))
                 continue
 
+            if char.isdigit() or (char == '-' and i + 1 < length and line[i + 1].isdigit()):
+                lexeme = ''
+                if char == '-':
+                    lexeme += '-'
+                    i += 1
+                    char = line[i]
+                while i < length and line[i].isdigit():
+                    lexeme += line[i]
+                    i += 1
+                tokens.append((line_num, 'CONSTANT', lexeme))
+                continue
+
             if char.isalpha():
                 lexeme = ''
                 while i < length and line[i].isalnum():
                     lexeme += line[i]
                     i += 1
-                tokens.append((line_num, 'OPCODE', lexeme))
-                continue
-
-            if char.isdigit():
-                lexeme = ''
-                while i < length and line[i].isdigit():
-                    lexeme += line[i]
-                    i += 1
-                tokens.append((line_num, 'CONSTANT', lexeme))
+                if lexeme in VALID_OPCODES:
+                    tokens.append((line_num, 'OPCODE', lexeme))
+                else:
+                    tokens.append((line_num, 'IDENTIFIER', lexeme))
                 continue
 
             if char == ',':
@@ -57,6 +64,7 @@ def scan(lines):
                 i += 2
                 continue
 
+            tokens.append((line_num, 'UNKNOWN', char))
             i += 1
 
     return tokens
@@ -72,10 +80,10 @@ def parse(tokens):
     line_tokens = {}
 
     for t in tokens:
-        line_num, _, _ = t
+        line_num, typ, lexeme = t
         if line_num not in line_tokens:
             line_tokens[line_num] = []
-        if t[1] != 'COMMENT':
+        if typ != 'COMMENT':
             line_tokens[line_num].append(t)
 
     for line_num, lt in line_tokens.items():
@@ -87,39 +95,74 @@ def parse(tokens):
         opcode = lexemes[0] if lt else ''
 
         if opcode not in VALID_OPCODES:
-            errors.append(f"Error on line {line_num}: Invalid opcode '{opcode}'")
+            errors.append(f"Error on line {line_num}: Unknown opcode '{opcode}'")
             continue
 
+        def check_operand(pos, allowed_types, name):
+            if types[pos] not in allowed_types:
+                allowed = " or ".join(allowed_types)
+                errors.append(f"Error on line {line_num}: {name} of '{opcode}' should be {allowed}, got '{types[pos]}'")
+
         if opcode in ['add', 'sub', 'mult', 'lshift', 'rshift']:
-            expected = ['OPCODE', 'REGISTER', 'COMMA', 'REGISTER', 'ASSIGN_ARROW', 'REGISTER']
-            if types != expected:
-                errors.append(f"Error on line {line_num}: Invalid format for '{opcode}'")
+            if len(types) != 6:
+                errors.append(f"Error on line {line_num}: '{opcode}' expects 6 tokens (opcode, operand1, ',', operand2, '=>', destination register)")
+                continue
+
+            check_operand(1, ['REGISTER', 'CONSTANT'], 'First operand')
+            if types[2] != 'COMMA':
+                errors.append(f"Error on line {line_num}: Missing comma between operands")
+            check_operand(3, ['REGISTER', 'CONSTANT'], 'Second operand')
+            if types[4] != 'ASSIGN_ARROW':
+                errors.append(f"Error on line {line_num}: Invalid assignment arrow")
+            check_operand(5, ['REGISTER'], 'Destination operand')
+
+            if types[1] == 'CONSTANT' and types[3] == 'CONSTANT' and opcode in ['add', 'sub', 'mult']:
+                errors.append(f"Error on line {line_num}: Cannot perform '{opcode}' on two constants; at least one operand must be a register")
 
         elif opcode == 'loadI':
-            expected = ['OPCODE', 'CONSTANT', 'ASSIGN_ARROW', 'REGISTER']
-            if types != expected:
-                errors.append(f"Error on line {line_num}: Invalid format for 'loadI'")
+            if len(types) != 4:
+                errors.append(f"Error on line {line_num}: 'loadI' expects a constant and a destination register")
+                continue
+            check_operand(1, ['CONSTANT'], 'LoadI value')
+            if types[2] != 'ASSIGN_ARROW':
+                errors.append(f"Error on line {line_num}: Invalid assignment arrow")
+            check_operand(3, ['REGISTER'], 'Destination register')
 
         elif opcode in ['load', 'store']:
-            expected = ['OPCODE', 'REGISTER', 'ASSIGN_ARROW', 'REGISTER']
-            if types != expected:
-                errors.append(f"Error on line {line_num}: Invalid format for '{opcode}'")
+            if len(types) != 4:
+                errors.append(f"Error on line {line_num}: '{opcode}' expects a source and destination register")
+                continue
+            check_operand(1, ['REGISTER'], 'Operand')
+            if types[2] != 'ASSIGN_ARROW':
+                errors.append(f"Error on line {line_num}: Invalid assignment arrow")
+            check_operand(3, ['REGISTER'], 'Destination register')
 
         elif opcode == 'output':
-            expected = ['OPCODE', 'REGISTER']
-            if types != expected:
-                errors.append(f"Error on line {line_num}: Invalid format for 'output'")
+            if len(types) != 2:
+                errors.append(f"Error on line {line_num}: Missing operand after 'output'")
+                continue
+            check_operand(1, ['REGISTER', 'CONSTANT'], 'Output operand')
 
         elif opcode == 'nop':
-            expected = ['OPCODE']
-            if types != expected:
-                errors.append(f"Error on line {line_num}: Invalid format for 'nop'")
+            if len(types) != 1:
+                errors.append(f"Error on line {line_num}: Invalid operand for 'nop'")
 
+        # Additional checks
         for i, typ in enumerate(types):
-            if typ == 'CONSTANT' and int(lexemes[i]) > 2**31 - 1:
-                errors.append(f"Error on line {line_num}: Constant out of range")
-            if typ == 'ASSIGN_ARROW' and lexemes[i] != '=>':
+            lex = lexemes[i]
+            if typ == 'CONSTANT':
+                try:
+                    val = int(lex)
+                    if not -(2**31) <= val <= 2**31 - 1:
+                        errors.append(f"Error on line {line_num}: Constant '{lex}' out of 32-bit integer range")
+                except ValueError:
+                    errors.append(f"Error on line {line_num}: Invalid constant '{lex}'")
+            if typ == 'REGISTER' and not lex[1:].isdigit():
+                errors.append(f"Error on line {line_num}: Invalid register name '{lex}'")
+            if typ == 'ASSIGN_ARROW' and lex != '=>':
                 errors.append(f"Error on line {line_num}: Invalid assignment arrow")
+            if typ == 'UNKNOWN':
+                errors.append(f"Error on line {line_num}: Unknown character or token '{lex}' detected")
 
     return errors
 
@@ -142,12 +185,20 @@ def build_ir(tokens):
         opcode = lt[0][1]
         op1 = op2 = op3 = None
 
-        if len(lt) > 1:
-            op1 = lt[1][1]
-        if len(lt) > 3:
-            op2 = lt[3][1]
-        if len(lt) > 5:
-            op3 = lt[5][1]
+        if opcode in ['add', 'sub', 'mult', 'lshift', 'rshift']:
+            op1 = lt[1][1] if len(lt) > 1 else None
+            op2 = lt[3][1] if len(lt) > 3 else None
+            op3 = lt[5][1] if len(lt) > 5 else None
+        elif opcode == 'loadI':
+            op1 = lt[1][1] if len(lt) > 1 else None
+            op2 = lt[3][1] if len(lt) > 3 else None
+        elif opcode in ['load', 'store']:
+            op1 = lt[1][1] if len(lt) > 1 else None
+            op2 = lt[3][1] if len(lt) > 3 else None
+        elif opcode == 'output':
+            op1 = lt[1][1] if len(lt) > 1 else None
+        elif opcode == 'nop':
+            pass
 
         ir.append({
             'line': line_num,
@@ -162,30 +213,26 @@ def build_ir(tokens):
 
 def print_ir(ir):
     for instr in ir:
-        opcode = instr["opcode"]
-        line_num = instr["line"]
+        opcode = instr['opcode']
+        line_num = instr['line']
+        op1 = instr['op1']
+        op2 = instr['op2']
+        op3 = instr['op3']
 
-        op1_label = "op1"
-        op2_label = "op2"
-        op3_label = "op3"
-
-        if opcode == "load":
-            op1_label = "src"
-            op2_label = "dest"
-            op3_label = None
-        elif opcode == "store":
-            op1_label = "src"
-            op2_label = "dest"
-            op3_label = None
-
-        line = f"Line {line_num}: {opcode}"
-
-        if instr["op1"] and op1_label:
-            line += f" — {op1_label}: {instr['op1']}"
-        if instr["op2"] and op2_label:
-            line += f" — {op2_label}: {instr['op2']}"
-        if instr["op3"] and op3_label:
-            line += f" — {op3_label}: {instr['op3']}"
+        if opcode in ['add', 'sub', 'mult', 'lshift', 'rshift']:
+            line = f"Line {line_num}: {opcode} — {op1}, {op2} => {op3}"
+        elif opcode == 'loadI':
+            line = f"Line {line_num}: {opcode} — op1: {op1} — dest: {op2}"
+        elif opcode == 'load':
+            line = f"Line {line_num}: {opcode} — src: {op1} — dest: {op2}"
+        elif opcode == 'store':
+            line = f"Line {line_num}: {opcode} — {op1} => {op2}"
+        elif opcode == 'output':
+            line = f"Line {line_num}: {opcode} — {op1}"
+        elif opcode == 'nop':
+            line = f"Line {line_num}: {opcode}"
+        else:
+            line = f"Line {line_num}: {opcode}"
 
         print(line)
 
@@ -242,8 +289,8 @@ elif flag == '-p':
     tokens = scan(lines)
     errors = parse(tokens)
     if not errors:
-        print("VALID ILOC PROGRAM")
         print("Compilation Successful!")
+        print("VALID ILOC PROGRAM")
     else:
         for err in errors:
             print(err)

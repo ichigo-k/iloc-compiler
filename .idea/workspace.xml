@@ -5,11 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="641eab8e-c7d9-4f25-bf78-c91258e53372" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/iloc-compiler.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/411fe.py" beforeDir="false" afterPath="$PROJECT_DIR$/411fe.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sample.iloc" beforeDir="false" afterPath="$PROJECT_DIR$/tests/sample.iloc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/valid.iloc" beforeDir="false" afterPath="$PROJECT_DIR$/tests/valid.iloc" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,6 +50,11 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\tette\OneDrive\Desktop\PROJECTS\iloc-compiler\tests" />
+    </key>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -66,7 +71,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1765453207936</updated>
-      <workItem from="1765453209005" duration="4145000" />
+      <workItem from="1765453209005" duration="7901000" />
     </task>
     <servers />
   </component>

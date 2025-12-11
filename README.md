@@ -49,7 +49,7 @@ The program is written in **Python 3**.
 3. Run the program
     ```bash
     ./411fe -h                  # show help
-    ./411fe -s sample.iloc     # scan only
-    ./411fe -p sample.iloc       # scan + parse (default mode)
-    ./411fe -r sample.iloc     # scan + parse + print IR
+    ./411fe -s ./tests/sample.iloc     # scan only
+    ./411fe -p ./tests/sample.iloc       # scan + parse (default mode)
+    ./411fe -r ./tests/sample.iloc     # scan + parse + print IR
     ```

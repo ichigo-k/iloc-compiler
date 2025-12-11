@@ -1,6 +1,10 @@
-loadI 10 => r1
-load r1 => r2
-add r1, r2 => r3 // addition
-mult r3, r2 => r4
-store r4 => r10
-
+loadI 10       => r1
+loadI 2025     => r2
+add   r1 , r2  => r3
+sub   r3 , 3 => r4
+mult  r4 , r2  => r5
+lshift r5 , 2  => r6
+rshift r6 , 1  => r7
+store r7       => r100
+output 1024
+nop
