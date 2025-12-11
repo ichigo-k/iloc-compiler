@@ -1,0 +1,4 @@
+add r1 r2 => r3
+load r5 = > r6
+output
+nop x
